@@ -1,0 +1,659 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Leanr AI Coach — Live</title>
+<link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:ital,wght@0,600;0,700;1,600;1,700&family=Manrope:wght@500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #050505; --text: #ffffff; --muted: rgba(255,255,255,0.72); --dim: rgba(255,255,255,0.5);
+    --brand: #FDEC06; --amber: #FF8A00; --coral: #FF5A3C;
+    --glass: linear-gradient(150deg, rgba(255,255,255,0.12), rgba(255,255,255,0.04));
+    --glass-line: rgba(255,255,255,0.14);
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; min-height: 100%; background: var(--bg); color: var(--text); font-family: 'Manrope', system-ui, sans-serif; }
+  button { font-family: inherit; }
+  .orb { position: fixed; border-radius: 999px; filter: blur(90px); pointer-events: none; z-index: 0; }
+  .glass { background: var(--glass); border: 1px solid var(--glass-line); -webkit-backdrop-filter: blur(22px) saturate(160%); backdrop-filter: blur(22px) saturate(160%); box-shadow: inset 0 1px 0 rgba(255,255,255,0.12), 0 12px 32px rgba(0,0,0,0.35); }
+  .glass-dark { background: rgba(18,18,18,0.55); border: 1px solid var(--glass-line); -webkit-backdrop-filter: blur(20px); backdrop-filter: blur(20px); }
+  .glass-y { background: linear-gradient(150deg, rgba(253,236,6,0.26), rgba(253,236,6,0.07)); border: 1px solid rgba(253,236,6,0.42); -webkit-backdrop-filter: blur(22px); backdrop-filter: blur(22px); }
+  .cta { background: var(--brand); color: #000; border: 0; box-shadow: inset 0 1px 0 rgba(255,255,255,0.7), 0 10px 30px rgba(253,236,6,0.30); }
+  .display { font-family: 'Chakra Petch', sans-serif; font-style: italic; font-weight: 700; text-transform: uppercase; }
+  .num { font-family: 'Chakra Petch', sans-serif; font-weight: 700; }
+  .caps { font-size: 11px; font-weight: 800; letter-spacing: 1.2px; text-transform: uppercase; }
+  .pulse { animation: pulse 1.6s ease-in-out infinite; }
+  @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.35; } }
+  .hidden { display: none !important; }
+
+  .app { position: relative; z-index: 1; max-width: 1280px; margin: 0 auto; padding: 16px 16px 24px; display: flex; flex-direction: column; gap: 14px; }
+  .topbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+  .brand { display: flex; align-items: baseline; gap: 12px; }
+  .wordmark { font-family: 'Chakra Petch', sans-serif; font-style: italic; font-weight: 700; font-size: 26px; color: var(--brand); letter-spacing: 1px; }
+  .pill { display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; border-radius: 999px; font-size: 12px; font-weight: 800; }
+  .dot { width: 8px; height: 8px; border-radius: 999px; background: var(--brand); box-shadow: 0 0 8px var(--brand); }
+
+  .layout { display: flex; gap: 14px; align-items: flex-start; flex-wrap: wrap; }
+  .stage-col { flex: 999 1 640px; min-width: 0; display: flex; justify-content: center; }
+  .stage { --ar: 1.3333; position: relative; width: min(100%, calc((100vh - 120px) * var(--ar))); aspect-ratio: var(--ar); border-radius: 28px; overflow: hidden; background: #0b0b0b; border: 1px solid var(--glass-line); }
+  .stage video, .stage canvas { position: absolute; inset: 0; width: 100%; height: 100%; transform: scaleX(-1); }
+  .stage video { object-fit: fill; opacity: 0.92; }
+  .hud { position: absolute; z-index: 3; }
+  .hud-top { left: 12px; right: 12px; top: 12px; display: flex; align-items: center; justify-content: space-between; gap: 10px; border-radius: 20px; padding: 8px 10px; }
+  .hud-top .mid { display: flex; flex-direction: column; align-items: center; gap: 1px; text-align: center; }
+  .hud-top .mid .ex { font-size: clamp(16px, 2.2vw, 22px); }
+  .iconbtn { width: 44px; height: 44px; border-radius: 999px; display: inline-flex; align-items: center; justify-content: center; color: #fff; cursor: pointer; padding: 0; }
+  .iconbtn svg, .ic { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+  .hud-status { left: 12px; top: 76px; }
+  .hud-form { right: 12px; top: 76px; display: flex; align-items: center; gap: 8px; padding: 6px 12px 6px 6px; border-radius: 999px; }
+  .depth { position: absolute; right: 18px; top: 140px; bottom: 170px; width: 14px; border-radius: 999px; overflow: hidden; z-index: 3; }
+  .depth .fill { position: absolute; left: 0; right: 0; bottom: 0; height: 0%; border-radius: 999px; background: var(--brand); transition: height .12s linear; }
+  .depth .target { position: absolute; left: -2px; right: -2px; height: 2px; background: #fff; }
+  .cue { position: absolute; z-index: 3; left: 50%; transform: translateX(-50%); bottom: 112px; width: min(560px, calc(100% - 24px)); border-radius: 18px; padding: 12px 14px; display: flex; align-items: center; gap: 12px; background: rgba(18,18,18,0.6); border: 1.5px solid rgba(253,236,6,0.42); -webkit-backdrop-filter: blur(20px); backdrop-filter: blur(20px); transition: background .2s, border-color .2s; }
+  .cue.bad { background: rgba(255,90,60,0.2); border-color: var(--coral); }
+  .cue .badge { width: 34px; height: 34px; border-radius: 999px; background: var(--brand); color: #000; display: flex; align-items: center; justify-content: center; flex: none; }
+  .cue.bad .badge { background: var(--coral); }
+  .cue .t1 { font-size: 16px; font-weight: 800; }
+  .cue .t2 { font-size: 12px; color: rgba(255,255,255,0.8); }
+  .hud-bottom { left: 12px; right: 12px; bottom: 12px; display: flex; gap: 10px; align-items: stretch; }
+  .reps { flex: 1; border-radius: 22px; padding: 10px 16px; display: flex; align-items: center; gap: 14px; min-width: 0; }
+  .reps .big { font-size: clamp(40px, 6vw, 56px); line-height: 1; }
+  .reps .of { font-size: 22px; color: var(--dim); }
+  .ctrl { display: flex; gap: 8px; }
+  .ctrl button { width: 54px; border-radius: 16px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; color: #fff; font-size: 11px; font-weight: 800; cursor: pointer; }
+  .ctrl .finish { width: 72px; color: #000; }
+
+  .overlay { position: absolute; inset: 0; z-index: 5; display: flex; align-items: center; justify-content: center; padding: 16px; background: rgba(5,5,5,0.55); }
+  .card { width: min(520px, 100%); border-radius: 26px; padding: 22px; display: flex; flex-direction: column; gap: 14px; }
+  .card h2 { margin: 0; font-size: 28px; line-height: 1; }
+  .card p { margin: 0; font-size: 14px; line-height: 1.5; color: var(--muted); }
+  .btn { height: 54px; border-radius: 16px; font-weight: 800; font-size: 16px; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: 8px; padding: 0 20px; }
+  .btn.big { font-family: 'Chakra Petch', sans-serif; font-style: italic; font-weight: 700; font-size: 19px; text-transform: uppercase; }
+  .btn.ghost { color: #fff; }
+  .row { display: flex; gap: 10px; flex-wrap: wrap; }
+  .checks { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; font-size: 14px; }
+  .checks li { display: flex; gap: 10px; align-items: center; }
+  .checks .tick { width: 22px; height: 22px; border-radius: 999px; background: var(--brand); color: #000; display: flex; align-items: center; justify-content: center; flex: none; }
+  .countdown { font-family: 'Chakra Petch', sans-serif; font-weight: 700; font-size: 140px; color: var(--brand); text-shadow: 0 0 40px rgba(253,236,6,0.5); }
+  .spinner { width: 46px; height: 46px; border-radius: 999px; border: 4px solid rgba(255,255,255,0.15); border-top-color: var(--brand); animation: spin 0.9s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .plan { flex: 1 1 280px; max-width: 360px; border-radius: 24px; padding: 16px; display: flex; flex-direction: column; gap: 12px; }
+  .plan h3 { margin: 0; font-size: 18px; }
+  .exrow { border-radius: 16px; padding: 12px; display: flex; align-items: center; gap: 12px; }
+  .exrow .n { width: 30px; height: 30px; border-radius: 999px; border: 1.5px solid var(--brand); color: var(--brand); display: flex; align-items: center; justify-content: center; font-family: 'Chakra Petch', sans-serif; font-weight: 700; flex: none; }
+  .exrow.active { border-color: var(--brand) !important; }
+  .exrow.done .n { background: var(--brand); color: #000; }
+  .bar { height: 6px; border-radius: 3px; background: rgba(255,255,255,0.12); overflow: hidden; }
+  .bar > div { height: 6px; background: var(--brand); border-radius: 3px; width: 0%; transition: width .2s; }
+  .note { font-size: 12px; color: var(--dim); line-height: 1.45; display: flex; gap: 8px; }
+
+  .score { position: relative; z-index: 1; max-width: 760px; margin: 0 auto; padding: 0 16px 32px; display: flex; flex-direction: column; gap: 14px; }
+  .score .head { display: flex; align-items: center; gap: 22px; flex-wrap: wrap; border-radius: 26px; padding: 22px; }
+  .ring { position: relative; width: 160px; height: 160px; flex: none; }
+  .ring svg { width: 160px; height: 160px; transform: rotate(-90deg); }
+  .ring .val { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+  .stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; }
+  .stat { border-radius: 18px; padding: 12px 14px; display: flex; flex-direction: column; gap: 2px; }
+  .stat .v { font-size: 26px; }
+  .panel { border-radius: 24px; padding: 16px 18px; display: flex; flex-direction: column; gap: 12px; }
+  .panel h3 { margin: 0; font-size: 18px; }
+  .brk { display: grid; grid-template-columns: 1fr 120px 44px; gap: 12px; align-items: center; font-size: 14px; }
+  .fix { display: flex; gap: 10px; align-items: center; font-size: 14px; }
+  .fix .x { width: 26px; height: 26px; border-radius: 999px; background: rgba(255,90,60,0.18); color: var(--coral); display: flex; align-items: center; justify-content: center; flex: none; font-weight: 800; }
+  @media (max-width: 640px) {
+    .stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .stage { width: 100%; }
+    .depth { display: none; }
+    .cue { bottom: 100px; }
+    .plan { max-width: none; }
+  }
+</style>
+</head>
+<body>
+<div class="orb" style="width: 420px; height: 420px; right: -160px; top: -120px; background: #FDEC06; opacity: 0.22"></div>
+<div class="orb" style="width: 380px; height: 380px; left: -180px; top: 45%; background: #FF8A00; opacity: 0.16"></div>
+
+<div class="app" id="app">
+  <header class="topbar">
+    <div class="brand">
+      <span class="wordmark" aria-label="Leanr">LEANR</span>
+      <span class="display" style="font-size: 18px">AI Coach · Live</span>
+    </div>
+    <span class="pill glass" title="Pose detection runs in your browser">
+      <svg class="ic" viewBox="0 0 24 24" aria-hidden="true" style="width: 14px; height: 14px; color: var(--brand)"><rect x="5" y="10.5" width="14" height="10" rx="2"/><path d="M8.5 10.5V8a3.5 3.5 0 0 1 7 0v2.5"/></svg>
+      On-device · camera never uploaded</span>
+  </header>
+
+  <div class="layout">
+    <div class="stage-col">
+      <section class="stage" id="stage" aria-label="Camera view">
+        <video id="video" playsinline muted></video>
+        <canvas id="overlay" aria-hidden="true"></canvas>
+
+        <div class="hud hud-top glass-dark" id="hudTop">
+          <button class="iconbtn glass" id="voiceBtn" aria-label="Turn voice coach off" aria-pressed="true">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9.5h3.5L12 5.5v13l-4.5-4H4Z"/><path d="M16 9a4 4 0 0 1 0 6M18.5 6.5a7.5 7.5 0 0 1 0 11"/></svg>
+          </button>
+          <div class="mid">
+            <span class="caps" style="color: var(--brand)" id="exLabel">Exercise 1 of 3</span>
+            <span class="display ex" id="exName">Squats</span>
+          </div>
+          <span class="num" style="font-size: 18px; padding: 0 8px" id="clock" aria-label="Session time">00:00</span>
+        </div>
+
+        <span class="hud hud-status pill glass-dark" id="trackPill"><span class="dot pulse"></span><span id="trackText">Starting camera…</span></span>
+
+        <div class="hud hud-form glass-dark" aria-live="off">
+          <svg viewBox="0 0 36 36" width="36" height="36" aria-hidden="true" style="transform: rotate(-90deg)">
+            <circle cx="18" cy="18" r="15" fill="none" stroke="rgba(255,255,255,0.16)" stroke-width="4"/>
+            <circle id="formArc" cx="18" cy="18" r="15" fill="none" stroke="#FDEC06" stroke-width="4" stroke-linecap="round" stroke-dasharray="94.2 94.2"/>
+          </svg>
+          <div style="display: flex; flex-direction: column">
+            <span class="caps" style="font-size: 10px; color: var(--muted)">Form</span>
+            <span class="num" style="font-size: 18px; line-height: 1; color: var(--brand)" id="formVal">100</span>
+          </div>
+        </div>
+
+        <div class="depth glass-dark" id="depthBar" aria-hidden="true"><div class="fill" id="depthFill"></div><div class="target" id="depthTarget" style="bottom: 78%"></div></div>
+
+        <div class="cue" id="cue" role="status" aria-live="polite">
+          <div class="badge" id="cueBadge"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true" style="stroke-width: 2.6"><path d="m5 12.5 4.5 4.5L19 7"/></svg></div>
+          <div style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px">
+            <span class="t1" id="cueT1">Get ready</span>
+            <span class="t2" id="cueT2">Stand 2–3 m back so your whole body is in view</span>
+          </div>
+        </div>
+
+        <div class="hud hud-bottom">
+          <div class="reps glass-dark">
+            <div style="display: flex; align-items: baseline" aria-live="polite"><span class="num big" id="repVal">0</span><span class="num of" id="repTarget">/10</span></div>
+            <div style="display: flex; flex-direction: column; gap: 2px; min-width: 0">
+              <span class="caps" style="color: var(--brand)">Reps</span>
+              <span style="font-size: 13px; font-weight: 700" id="cleanVal">0 clean</span>
+              <span style="font-size: 12px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis" id="exTip">Thighs to parallel, knees out</span>
+            </div>
+          </div>
+          <div class="ctrl">
+            <button class="glass-dark" id="pauseBtn" aria-label="Pause"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true" id="pauseIcon"><path d="M9 5v14M15 5v14"/></svg><span id="pauseTxt">Pause</span></button>
+            <button class="glass-dark" id="skipBtn" aria-label="Skip exercise"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="m6 6 7 6-7 6V6ZM16 6v12"/></svg>Skip</button>
+            <button class="cta finish" id="finishBtn" aria-label="Finish session"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><rect x="6" y="6" width="12" height="12" rx="2"/></svg>Finish</button>
+          </div>
+        </div>
+
+        <!-- Overlays -->
+        <div class="overlay" id="introOv">
+          <div class="card glass">
+            <span class="pill cta" style="align-self: flex-start">HARDCORE · DEMO SESSION</span>
+            <h2 class="display">Quick Burn</h2>
+            <p>3 exercises with live AI form tracking: <b style="color: #fff">Squats ×10</b>, <b style="color: #fff">Jumping jacks ×15</b>, <b style="color: #fff">High knees ×20</b>. Your camera finds your body, counts every rep and tells you what to fix.</p>
+            <ul class="checks">
+              <li><span class="tick"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true" style="width: 14px; height: 14px; stroke-width: 3"><path d="m5 12.5 4.5 4.5L19 7"/></svg></span>Put your laptop on a table, camera at about hip–chest height</li>
+              <li><span class="tick"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true" style="width: 14px; height: 14px; stroke-width: 3"><path d="m5 12.5 4.5 4.5L19 7"/></svg></span>Step back 2–3 m so head to feet are visible</li>
+              <li><span class="tick"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true" style="width: 14px; height: 14px; stroke-width: 3"><path d="m5 12.5 4.5 4.5L19 7"/></svg></span>Face the camera, good light in front of you</li>
+            </ul>
+            <div class="row">
+              <button class="btn big cta" id="startBtn" style="flex: 1">Enable camera &amp; start</button>
+            </div>
+            <p style="font-size: 12px">Video is processed on this device only. Nothing is recorded or uploaded. Not medical advice — stop if anything hurts.</p>
+          </div>
+        </div>
+
+        <div class="overlay hidden" id="loadingOv">
+          <div class="card glass" style="align-items: center; text-align: center">
+            <div class="spinner" aria-hidden="true"></div>
+            <h2 class="display" style="font-size: 22px" id="loadingTitle">Loading AI model…</h2>
+            <p id="loadingSub">Downloading the pose model (about 5 MB) — only the first time.</p>
+          </div>
+        </div>
+
+        <div class="overlay hidden" id="countOv" style="background: rgba(5,5,5,0.25)">
+          <div class="countdown" id="countVal" aria-live="assertive">3</div>
+        </div>
+
+        <div class="overlay hidden" id="restOv">
+          <div class="card glass" style="align-items: center; text-align: center">
+            <span class="caps" style="color: var(--brand)" id="restLabel">Exercise 1 of 3 done</span>
+            <h2 class="display">Rest</h2>
+            <div class="countdown" style="font-size: 96px" id="restVal">10</div>
+            <div class="glass-y" style="width: 100%; border-radius: 18px; padding: 14px; text-align: left; display: flex; flex-direction: column; gap: 4px">
+              <span class="caps" style="color: var(--brand)">Up next</span>
+              <span class="display" style="font-size: 22px" id="nextName">Jumping jacks</span>
+              <span style="font-size: 13px; color: rgba(255,255,255,0.85)" id="nextTip">Arms all the way overhead, feet wide.</span>
+            </div>
+            <div class="row" style="width: 100%">
+              <button class="btn ghost glass" id="addRestBtn" style="flex: 1">+10 s</button>
+              <button class="btn cta" id="skipRestBtn" style="flex: 1">Skip rest</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="overlay hidden" id="errorOv">
+          <div class="card glass">
+            <h2 class="display" style="font-size: 22px; color: var(--coral)" id="errTitle">Camera not available</h2>
+            <p id="errMsg"></p>
+            <button class="btn cta" id="retryBtn">Try again</button>
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <aside class="plan glass" aria-label="Session plan">
+      <div style="display: flex; align-items: center; justify-content: space-between">
+        <h3 class="display">Quick Burn</h3>
+        <span class="pill glass-y" style="color: var(--brand)">3 exercises</span>
+      </div>
+      <div id="planList" style="display: flex; flex-direction: column; gap: 8px"></div>
+      <div class="note"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true" style="width: 16px; height: 16px; flex: none; color: var(--brand)"><circle cx="12" cy="12" r="8.5"/><path d="M12 11v5M12 8v.2"/></svg>
+        <span>Yellow skeleton = good form. Joints turn coral when the AI spots a mistake, and the coach tells you how to fix it.</span></div>
+      <div class="note"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true" style="width: 16px; height: 16px; flex: none; color: var(--brand)"><path d="M4 9.5h3.5L12 5.5v13l-4.5-4H4Z"/></svg>
+        <span>Turn your volume up for voice cues.</span></div>
+    </aside>
+  </div>
+</div>
+
+<section class="score hidden" id="scoreView" aria-label="Session score card">
+  <div style="display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap">
+    <div style="display: flex; flex-direction: column; gap: 4px">
+      <span class="caps" style="color: var(--brand)">Session complete</span>
+      <h1 class="display" style="margin: 0; font-size: 34px; line-height: 1">Quick Burn</h1>
+      <span style="font-size: 13px; color: var(--muted)" id="scDate"></span>
+    </div>
+    <button class="btn cta" id="againBtn">Train again</button>
+  </div>
+  <div class="head glass">
+    <div class="ring">
+      <svg viewBox="0 0 160 160" aria-hidden="true">
+        <circle cx="80" cy="80" r="68" fill="none" stroke="rgba(255,255,255,0.12)" stroke-width="12"/>
+        <circle id="scArc" cx="80" cy="80" r="68" fill="none" stroke="#FDEC06" stroke-width="12" stroke-linecap="round" stroke-dasharray="0 427"/>
+      </svg>
+      <div class="val"><span class="num" style="font-size: 54px; line-height: 1" id="scScore">0</span><span style="font-size: 12px; color: var(--muted)">Form score</span></div>
+    </div>
+    <div style="flex: 1; min-width: 220px; display: flex; flex-direction: column; gap: 8px">
+      <span class="pill cta" style="align-self: flex-start" id="scGrade">Great form</span>
+      <p style="margin: 0; font-size: 15px; line-height: 1.5; color: rgba(255,255,255,0.85)" id="scSummary"></p>
+    </div>
+  </div>
+  <div class="stats">
+    <div class="stat glass"><span class="caps" style="color: var(--muted)">Time</span><span class="num v" id="scTime">0:00</span></div>
+    <div class="stat glass"><span class="caps" style="color: var(--muted)">Reps</span><span class="num v" id="scReps">0</span></div>
+    <div class="stat glass-y"><span class="caps" style="color: rgba(255,255,255,0.85)">Clean reps</span><span class="num v" style="color: var(--brand)" id="scClean">0%</span></div>
+    <div class="stat glass"><span class="caps" style="color: var(--muted)">Calories</span><span class="num v" id="scKcal">~0</span><span style="font-size: 11px; color: var(--dim)">estimate</span></div>
+  </div>
+  <div class="panel glass"><h3 class="display">Exercise breakdown</h3><div id="scBreak" style="display: flex; flex-direction: column; gap: 12px"></div></div>
+  <div class="panel glass"><h3 class="display">What to fix</h3><div id="scFix" style="display: flex; flex-direction: column; gap: 10px"></div></div>
+  <div class="panel glass-y">
+    <div style="display: flex; align-items: center; gap: 8px"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true" style="color: var(--brand)"><path d="M12 3.5 14 10l6.5 2-6.5 2-2 6.5-2-6.5-6.5-2L10 10Z"/></svg><h3 class="display">AI coach tip</h3></div>
+    <p style="margin: 0; font-size: 15px; line-height: 1.55" id="scTip"></p>
+  </div>
+</section>
+
+<script type="module">
+import { PoseLandmarker, FilesetResolver } from 'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14/vision_bundle.mjs';
+
+const $ = (id) => document.getElementById(id);
+const YELLOW = '#FDEC06', CORAL = '#FF5A3C';
+const EXERCISES = [
+  { key: 'squat', name: 'Squats', target: 10, tip: 'Thighs to parallel, knees out', next: 'Feet shoulder-width, sit back, thighs to parallel.' },
+  { key: 'jack', name: 'Jumping jacks', target: 15, tip: 'Arms overhead, feet wide', next: 'Arms all the way overhead, land with feet wide.' },
+  { key: 'knees', name: 'High knees', target: 20, tip: 'Knees up to hip height', next: 'Drive each knee up to hip height, stay light on your feet.' }
+];
+const CUES = {
+  shallow: ['Go lower', 'Get your thighs to parallel'],
+  valgus: ['Push your knees out', 'Keep your knees over your toes'],
+  arms: ['Arms all the way up', 'Reach fully overhead every rep'],
+  feet: ['Jump your feet wider', 'Land wider than your shoulders'],
+  low: ['Lift your knees higher', 'Drive them up to hip height'],
+  frame: ['Step back', 'I need to see you from head to feet']
+};
+const MISTAKE_LABEL = {
+  valgus: ['Knees caving in', 'Squats'], shallow: ['Not deep enough', 'Squats'],
+  arms: ['Arms not fully overhead', 'Jumping jacks'], feet: ['Feet not wide enough', 'Jumping jacks'],
+  low: ['Knees not high enough', 'High knees']
+};
+const TIPS = {
+  valgus: 'Your knees caved in on some squats. On the way down, push them out so they track over your toes — think "spread the floor" with your feet.',
+  shallow: 'Some squats were shallow. Sit back like you are reaching for a chair and get your thighs to parallel before standing up.',
+  arms: 'On jumping jacks, reach fully overhead every rep. Full range keeps your shoulders working and your rhythm steady.',
+  feet: 'Land your jumping jacks wider than your shoulders so each rep is a full movement.',
+  low: 'Drive your knees up to hip height on high knees. Shorter, quicker steps make it easier to get them higher.',
+  none: 'Clean session — every rep looked solid. Next time, add a few reps to each exercise or speed up the pace.'
+};
+const BONES = [[11,12],[11,13],[13,15],[12,14],[14,16],[11,23],[12,24],[23,24],[23,25],[25,27],[24,26],[26,28],[27,31],[28,32],[27,29],[28,30]];
+const BODY = [11,12,23,24,25,26,27,28];
+
+const video = $('video'), canvas = $('overlay'), ctx = canvas.getContext('2d');
+let landmarker = null, stream = null;
+let mode = 'intro';            // intro | loading | calibrate | countdown | work | rest | done | error
+let paused = false, voiceOn = true;
+let exIdx = 0, sessionStart = 0, activeMs = 0, lastTick = 0;
+let calibSince = 0, countTimer = null, restTimer = null, restLeft = 10;
+let lastSpeak = 0, lastCueKey = '', cueHoldUntil = 0, badJoints = new Set(), badUntil = 0;
+let st = {};                   // per-exercise detector state
+const stats = {};              // key -> { reps, clean, scores:[], mistakes:{} }
+EXERCISES.forEach((e) => { stats[e.key] = { reps: 0, clean: 0, scores: [], mistakes: {} }; });
+
+// ---------- UI helpers ----------
+function show(id, on) { $(id).classList.toggle('hidden', !on); }
+function speak(text, force) {
+  if (!voiceOn || !('speechSynthesis' in window)) return;
+  const now = performance.now();
+  if (!force && now - lastSpeak < 2200) return;
+  lastSpeak = now;
+  try { speechSynthesis.cancel(); const u = new SpeechSynthesisUtterance(text); u.rate = 1.05; u.pitch = 1; speechSynthesis.speak(u); } catch (e) {}
+}
+function setCue(kind, t1, t2, bad, say) {
+  const now = performance.now();
+  if (!bad && now < cueHoldUntil) return;     // keep a correction visible for a moment
+  $('cue').classList.toggle('bad', !!bad);
+  $('cueT1').textContent = t1; $('cueT2').textContent = t2;
+  $('cueBadge').innerHTML = bad
+    ? '<svg class="ic" viewBox="0 0 24 24" aria-hidden="true" style="stroke-width:2.8"><path d="M12 7v6M12 17v.5"/></svg>'
+    : '<svg class="ic" viewBox="0 0 24 24" aria-hidden="true" style="stroke-width:2.6"><path d="m5 12.5 4.5 4.5L19 7"/></svg>';
+  if (bad) cueHoldUntil = now + 1600;
+  if (say && (kind !== lastCueKey || bad)) speak(say, false);
+  lastCueKey = kind;
+}
+function mistake(key, joints) {
+  const [t1, t2] = CUES[key];
+  setCue(key, t1, t2, true, t1);
+  badJoints = new Set(joints); badUntil = performance.now() + 900;
+}
+function fmt(ms) { const s = Math.floor(ms / 1000); const m = Math.floor(s / 60); return String(m).padStart(2, '0') + ':' + String(s % 60).padStart(2, '0'); }
+function overallScore() { const all = EXERCISES.flatMap((e) => stats[e.key].scores); return all.length ? Math.round(all.reduce((a, b) => a + b, 0) / all.length) : 100; }
+function renderPlan() {
+  $('planList').innerHTML = EXERCISES.map((e, i) => {
+    const s = stats[e.key]; const pct = Math.min(100, Math.round((s.reps / e.target) * 100));
+    const cls = i < exIdx || s.reps >= e.target ? 'done' : (i === exIdx && mode !== 'done' ? 'active' : '');
+    return '<div class="exrow glass ' + cls + '"><span class="n">' + (i + 1) + '</span><div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:5px">' +
+      '<div style="display:flex;justify-content:space-between;gap:8px"><span style="font-weight:800;font-size:14px">' + e.name + '</span><span class="num" style="font-size:14px">' + s.reps + '/' + e.target + '</span></div>' +
+      '<div class="bar"><div style="width:' + pct + '%"></div></div></div></div>';
+  }).join('');
+}
+function renderHud() {
+  const e = EXERCISES[exIdx], s = stats[e.key];
+  $('exLabel').textContent = 'Exercise ' + (exIdx + 1) + ' of ' + EXERCISES.length;
+  $('exName').textContent = e.name;
+  $('repVal').textContent = s.reps; $('repTarget').textContent = '/' + e.target;
+  $('cleanVal').textContent = s.clean + ' clean';
+  $('exTip').textContent = e.tip;
+  const sc = overallScore(); $('formVal').textContent = sc;
+  const c = 2 * Math.PI * 15; $('formArc').setAttribute('stroke-dasharray', (c * sc / 100).toFixed(1) + ' ' + c.toFixed(1));
+  $('formArc').setAttribute('stroke', sc >= 85 ? YELLOW : '#FF8A00'); $('formVal').style.color = sc >= 85 ? YELLOW : '#FF8A00';
+  $('depthBar').style.visibility = e.key === 'jack' ? 'hidden' : 'visible';
+  $('depthTarget').style.bottom = e.key === 'squat' ? '78%' : '80%';
+  renderPlan();
+}
+
+// ---------- geometry ----------
+const P = (lm, i) => ({ x: lm[i].x * canvas.width, y: lm[i].y * canvas.height, v: lm[i].visibility == null ? 1 : lm[i].visibility });
+function visible(lm, ids) { return ids.every((i) => { const l = lm[i]; const v = l.visibility == null ? 1 : l.visibility; return v > 0.5 && l.y > -0.02 && l.y < 1.03 && l.x > -0.03 && l.x < 1.03; }); }
+
+// ---------- rep logic ----------
+function resetDetector() { st = { phase: 'up', base: 0, minR: 9, valgus: false, armsSeen: false, feetSeen: false, L: { up: false, min: 9, base: 0 }, R: { up: false, min: 9, base: 0 } }; }
+function countRep(ex, flags, joints) {
+  const s = stats[ex.key];
+  s.reps += 1;
+  const score = Math.max(40, 100 - flags.length * 28);
+  s.scores.push(score);
+  if (!flags.length) s.clean += 1;
+  flags.forEach((f) => { s.mistakes[f] = (s.mistakes[f] || 0) + 1; });
+  if (flags.length) mistake(flags[0], joints);
+  else {
+    const good = ex.key === 'squat' ? ['Good rep', 'Nice depth — knees on track'] : ex.key === 'jack' ? ['Nice rep', 'Full range — keep the rhythm'] : ['Good knee drive', 'Keep it quick and light'];
+    setCue('good', good[0], good[1], false, null);
+  }
+  const say = ex.key === 'squat' || s.reps % 5 === 0 || s.reps === ex.target ? String(s.reps) : null;
+  if (say && !flags.length) speak(say, false);
+  renderHud();
+  if (s.reps >= ex.target) nextExercise();
+}
+function detect(lm) {
+  const ex = EXERCISES[exIdx];
+  const sh = (P(lm, 11).y + P(lm, 12).y) / 2, hip = (P(lm, 23).y + P(lm, 24).y) / 2;
+  const torso = Math.max(20, hip - sh);
+  const shoulderW = Math.abs(P(lm, 11).x - P(lm, 12).x);
+  if (ex.key === 'squat') {
+    const ratio = (side) => { const h = P(lm, side ? 24 : 23), k = P(lm, side ? 26 : 25), a = P(lm, side ? 28 : 27); return (k.y - h.y) / Math.max(10, a.y - k.y); };
+    const r = (ratio(0) + ratio(1)) / 2;                    // ~1 standing, ~0 at parallel
+    if (st.phase === 'up' && r > 0.6) st.base = st.base ? st.base * 0.92 + r * 0.08 : r;   // learn this person's standing ratio
+    const base = st.base || 1;
+    const depthPct = Math.max(0, Math.min(1, (base - r) / (base * 0.9)));
+    $('depthFill').style.height = Math.round(depthPct * 100) + '%';
+    $('depthFill').style.background = st.valgus ? CORAL : YELLOW;
+    const kneeD = Math.abs(P(lm, 25).x - P(lm, 26).x), ankleD = Math.abs(P(lm, 27).x - P(lm, 28).x);
+    if (st.phase === 'up' && r < base * 0.62) { st.phase = 'down'; st.minR = r; st.valgus = false; }
+    if (st.phase === 'down') {
+      st.minR = Math.min(st.minR, r);
+      if (r < base * 0.5 && kneeD < ankleD * 0.78 && !st.valgus) { st.valgus = true; mistake('valgus', [25, 26]); }
+      if (r > base * 0.85) {
+        const flags = [];
+        if (st.minR > base * 0.36) flags.push('shallow');
+        if (st.valgus) flags.push('valgus');
+        st.phase = 'up';
+        countRep(ex, flags, flags.includes('valgus') ? [25, 26] : [23, 24, 25, 26]);
+      }
+    }
+  } else if (ex.key === 'jack') {
+    const nose = P(lm, 0).y;
+    const wl = P(lm, 15).y, wr = P(lm, 16).y;
+    const armsUp = wl < nose && wr < nose;
+    const armsDown = wl > P(lm, 11).y + torso * 0.1 && wr > P(lm, 12).y + torso * 0.1;
+    const ankleD = Math.abs(P(lm, 27).x - P(lm, 28).x);
+    const feetWide = ankleD > shoulderW * 1.25, feetClosed = ankleD < shoulderW * 0.95;
+    if (st.phase === 'up') { /* 'up' == closed here */ if (armsUp || feetWide || (wl < sh && wr < sh)) { st.phase = 'open'; st.armsSeen = armsUp; st.feetSeen = feetWide; } }
+    else {
+      st.armsSeen = st.armsSeen || armsUp; st.feetSeen = st.feetSeen || feetWide;
+      if (armsDown && feetClosed) {
+        const flags = []; if (!st.armsSeen) flags.push('arms'); if (!st.feetSeen) flags.push('feet');
+        st.phase = 'up';
+        countRep(ex, flags, flags[0] === 'arms' ? [13, 14, 15, 16] : [27, 28]);
+      }
+    }
+  } else if (ex.key === 'knees') {
+    let best = 1;
+    [['L', 23, 25], ['R', 24, 26]].forEach(([k, hi, ki]) => {
+      const d = (P(lm, ki).y - P(lm, hi).y) / torso;      // ~0.9 standing, ~0 at hip height
+      best = Math.min(best, d);
+      const leg = st[k];
+      if (!leg.up && d > 0.45) leg.base = leg.base ? leg.base * 0.92 + d * 0.08 : d;   // learn standing thigh length
+      const lb = leg.base || 0.9;
+      if (!leg.up && d < lb * 0.55) { leg.up = true; leg.min = d; }
+      if (leg.up) {
+        leg.min = Math.min(leg.min, d);
+        if (d > lb * 0.78) { leg.up = false; const flags = leg.min > lb * 0.32 ? ['low'] : []; countRep(ex, flags, [ki]); }
+      }
+    });
+    $('depthFill').style.height = Math.round(Math.max(0, Math.min(1, (0.95 - best) / 0.95)) * 100) + '%';
+    $('depthFill').style.background = YELLOW;
+  }
+}
+
+// ---------- drawing ----------
+function draw(lm) {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  if (!lm) return;
+  const now = performance.now();
+  const bad = now < badUntil ? badJoints : new Set();
+  const lw = Math.max(4, canvas.width * 0.007);
+  ctx.lineCap = 'round';
+  for (const [a, b] of BONES) {
+    const A = P(lm, a), B = P(lm, b);
+    if (A.v < 0.4 || B.v < 0.4) continue;
+    ctx.strokeStyle = bad.has(a) || bad.has(b) ? CORAL : YELLOW;
+    ctx.shadowColor = ctx.strokeStyle; ctx.shadowBlur = 10;
+    ctx.lineWidth = lw; ctx.beginPath(); ctx.moveTo(A.x, A.y); ctx.lineTo(B.x, B.y); ctx.stroke();
+  }
+  ctx.shadowBlur = 0;
+  const nose = P(lm, 0);
+  if (nose.v > 0.4) { const r = Math.abs(P(lm, 11).x - P(lm, 12).x) * 0.38; ctx.strokeStyle = YELLOW; ctx.lineWidth = lw * 0.8; ctx.beginPath(); ctx.arc(nose.x, nose.y, Math.max(12, r), 0, Math.PI * 2); ctx.stroke(); }
+  for (const i of [11,12,13,14,15,16,23,24,25,26,27,28]) {
+    const J = P(lm, i); if (J.v < 0.4) continue;
+    const isBad = bad.has(i);
+    ctx.fillStyle = isBad ? CORAL : '#FFFFFF';
+    ctx.beginPath(); ctx.arc(J.x, J.y, lw * (isBad ? 1.6 : 1.05), 0, Math.PI * 2); ctx.fill();
+    if (isBad) { ctx.strokeStyle = CORAL; ctx.lineWidth = 2; ctx.setLineDash([5, 5]); ctx.beginPath(); ctx.arc(J.x, J.y, lw * 4, 0, Math.PI * 2); ctx.stroke(); ctx.setLineDash([]); }
+  }
+}
+
+// ---------- flow ----------
+function tickClock() {
+  const now = performance.now();
+  if ((mode === 'work' || mode === 'rest') && !paused) activeMs += now - lastTick;
+  lastTick = now;
+  $('clock').textContent = fmt(activeMs);
+}
+let lastVideoTime = -1;
+function loop() {
+  if (!landmarker || mode === 'done') return;
+  tickClock();
+  if (video.readyState >= 2 && video.currentTime !== lastVideoTime) {
+    lastVideoTime = video.currentTime;
+    let lm = null;
+    try { const res = landmarker.detectForVideo(video, performance.now()); lm = res.landmarks && res.landmarks[0]; } catch (e) {}
+    const full = lm && visible(lm, BODY);
+    $('trackText').textContent = !lm ? 'Looking for you…' : full ? 'AI tracking · 33 points' : 'Partly in view';
+    if (mode === 'calibrate') {
+      if (full) { if (!calibSince) calibSince = performance.now(); if (performance.now() - calibSince > 1000) startCountdown(); setCue('frame-ok', 'Got you!', 'Hold still — starting soon', false, null); }
+      else { calibSince = 0; setCue('frame', CUES.frame[0], CUES.frame[1], false, null); }
+    } else if (mode === 'work' && !paused) {
+      if (full) detect(lm);
+      else if (lm) setCue('frame', CUES.frame[0], CUES.frame[1], true, 'Step back');
+    }
+    draw(lm);
+  }
+  requestAnimationFrame(loop);
+}
+function startCountdown() {
+  if (mode !== 'calibrate') return;
+  mode = 'countdown'; show('countOv', true);
+  let n = 3; $('countVal').textContent = n; speak('3', true);
+  countTimer = setInterval(() => {
+    n -= 1;
+    if (n > 0) { $('countVal').textContent = n; speak(String(n), true); }
+    else { clearInterval(countTimer); show('countOv', false); beginExercise(); }
+  }, 900);
+}
+function beginExercise() {
+  mode = 'work'; resetDetector();
+  const e = EXERCISES[exIdx];
+  setCue('start', 'Go! ' + e.name, e.tip, false, null);
+  speak(e.name + '. Go!', true);
+  renderHud();
+}
+function nextExercise() {
+  if (exIdx >= EXERCISES.length - 1) { finish(); return; }
+  mode = 'rest'; restLeft = 10;
+  $('restLabel').textContent = 'Exercise ' + (exIdx + 1) + ' of ' + EXERCISES.length + ' done';
+  const nx = EXERCISES[exIdx + 1];
+  $('nextName').textContent = nx.name + ' · ' + nx.target + ' reps'; $('nextTip').textContent = nx.next;
+  $('restVal').textContent = restLeft; show('restOv', true);
+  speak('Nice work. Rest. Up next, ' + nx.name, true);
+  clearInterval(restTimer);
+  restTimer = setInterval(() => {
+    if (paused) return;
+    restLeft -= 1; $('restVal').textContent = Math.max(0, restLeft);
+    if (restLeft === 3) speak('3, 2, 1', true);
+    if (restLeft <= 0) endRest();
+  }, 1000);
+}
+function endRest() { clearInterval(restTimer); show('restOv', false); exIdx += 1; beginExercise(); }
+function finish() {
+  mode = 'done'; clearInterval(restTimer); clearInterval(countTimer);
+  if (stream) stream.getTracks().forEach((t) => t.stop());
+  speak('Session complete. Great work!', true);
+  renderScore();
+  $('app').classList.add('hidden'); show('scoreView', true);
+  window.scrollTo(0, 0);
+}
+function renderScore() {
+  const total = EXERCISES.reduce((a, e) => a + stats[e.key].reps, 0);
+  const clean = EXERCISES.reduce((a, e) => a + stats[e.key].clean, 0);
+  const sc = total ? overallScore() : 0;
+  const circ = 2 * Math.PI * 68;
+  $('scScore').textContent = sc;
+  $('scArc').setAttribute('stroke-dasharray', (circ * sc / 100).toFixed(1) + ' ' + circ.toFixed(1));
+  $('scGrade').textContent = !total ? 'No reps yet' : sc >= 90 ? 'Beast mode' : sc >= 80 ? 'Great form' : sc >= 65 ? 'Solid — room to grow' : 'Keep practising';
+  $('scDate').textContent = new Date().toLocaleDateString(undefined, { weekday: 'short', day: 'numeric', month: 'short' }) + ' · ' + fmt(activeMs);
+  $('scTime').textContent = fmt(activeMs);
+  $('scReps').textContent = total;
+  $('scClean').textContent = total ? Math.round((clean / total) * 100) + '%' : '—';
+  $('scKcal').textContent = '~' + Math.max(1, Math.round((activeMs / 60000) * 9));
+  const mins = Math.max(1, Math.round(activeMs / 60000));
+  $('scSummary').textContent = total
+    ? 'You did ' + total + ' reps in about ' + mins + ' min, and ' + clean + ' of them had clean form.'
+    : 'No reps were counted this time. Make sure your whole body is in view and try again.';
+  $('scBreak').innerHTML = EXERCISES.map((e) => {
+    const s = stats[e.key]; const avg = s.scores.length ? Math.round(s.scores.reduce((a, b) => a + b, 0) / s.scores.length) : 0;
+    return '<div class="brk"><div style="display:flex;flex-direction:column;gap:2px"><span style="font-weight:800">' + e.name + '</span><span style="font-size:12px;color:rgba(255,255,255,0.72)">' + s.clean + ' / ' + s.reps + ' clean · target ' + e.target + '</span></div>' +
+      '<div class="bar"><div style="width:' + avg + '%;background:' + (avg >= 80 ? YELLOW : '#FF8A00') + '"></div></div><span class="num" style="text-align:right;font-size:18px">' + (s.reps ? avg : '—') + '</span></div>';
+  }).join('');
+  const all = [];
+  EXERCISES.forEach((e) => Object.entries(stats[e.key].mistakes).forEach(([k, n]) => all.push([k, n])));
+  all.sort((a, b) => b[1] - a[1]);
+  $('scFix').innerHTML = all.length
+    ? all.map(([k, n]) => '<div class="fix"><span class="x">!</span><span style="flex:1"><b>' + MISTAKE_LABEL[k][0] + '</b> · ' + MISTAKE_LABEL[k][1] + '</span><span class="num">' + n + (n === 1 ? ' rep' : ' reps') + '</span></div>').join('')
+    : '<div class="fix"><span class="x" style="background:rgba(253,236,6,0.18);color:#FDEC06">✓</span><span>No form mistakes detected.</span></div>';
+  $('scTip').textContent = total ? TIPS[all.length ? all[0][0] : 'none'] : 'Stand 2–3 m from the camera with your head and feet in view, then start again.';
+}
+
+async function start() {
+  show('introOv', false); show('errorOv', false); show('loadingOv', true);
+  $('loadingTitle').textContent = 'Starting camera…'; $('loadingSub').textContent = 'Allow camera access when your browser asks.';
+  try {
+    stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user', width: { ideal: 1280 }, height: { ideal: 720 } }, audio: false });
+  } catch (e) {
+    return fail('Camera not available', 'Leanr needs your camera to track your body. Allow camera access in the browser bar and try again. (' + (e && e.name ? e.name : 'error') + ')');
+  }
+  video.srcObject = stream;
+  await video.play().catch(() => {});
+  await new Promise((r) => { if (video.videoWidth) r(); else video.onloadedmetadata = () => r(); });
+  canvas.width = video.videoWidth; canvas.height = video.videoHeight;
+  $('stage').style.setProperty('--ar', (video.videoWidth / video.videoHeight).toFixed(4));
+  if (!landmarker) {
+    $('loadingTitle').textContent = 'Loading AI model…'; $('loadingSub').textContent = 'Downloading the pose model (about 5 MB) — only the first time.';
+    try {
+      const vision = await FilesetResolver.forVisionTasks('https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14/wasm');
+      const opts = (delegate) => ({ baseOptions: { modelAssetPath: 'https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_lite/float16/1/pose_landmarker_lite.task', delegate }, runningMode: 'VIDEO', numPoses: 1, minPoseDetectionConfidence: 0.5, minPosePresenceConfidence: 0.5, minTrackingConfidence: 0.5 });
+      try { landmarker = await PoseLandmarker.createFromOptions(vision, opts('GPU')); }
+      catch (e) { landmarker = await PoseLandmarker.createFromOptions(vision, opts('CPU')); }
+    } catch (e) {
+      return fail('AI model could not load', 'Check your internet connection — the pose model downloads from Google the first time. (' + (e && e.message ? e.message : e) + ')');
+    }
+  }
+  show('loadingOv', false);
+  mode = 'calibrate'; calibSince = 0; lastTick = performance.now();
+  setCue('frame', 'Get in frame', 'Step back until your head and feet are visible', false, null);
+  speak('Step back until your whole body is in the frame', true);
+  renderHud();
+  requestAnimationFrame(loop);
+}
+function fail(title, msg) { mode = 'error'; show('loadingOv', false); $('errTitle').textContent = title; $('errMsg').textContent = msg; show('errorOv', true); }
+
+// ---------- controls ----------
+$('startBtn').addEventListener('click', start);
+$('retryBtn').addEventListener('click', start);
+$('pauseBtn').addEventListener('click', () => {
+  paused = !paused;
+  $('pauseTxt').textContent = paused ? 'Resume' : 'Pause';
+  $('pauseBtn').setAttribute('aria-label', paused ? 'Resume' : 'Pause');
+  $('pauseIcon').innerHTML = paused ? '<path d="M7 5v14l11-7Z"/>' : '<path d="M9 5v14M15 5v14"/>';
+  if (paused) setCue('pause', 'Paused', 'Tap Resume when you are ready', false, null);
+});
+$('skipBtn').addEventListener('click', () => { if (mode === 'work') nextExercise(); else if (mode === 'rest') endRest(); });
+$('finishBtn').addEventListener('click', () => { if (mode !== 'intro' && mode !== 'loading') finish(); });
+$('addRestBtn').addEventListener('click', () => { restLeft += 10; $('restVal').textContent = restLeft; });
+$('skipRestBtn').addEventListener('click', endRest);
+$('voiceBtn').addEventListener('click', () => {
+  voiceOn = !voiceOn;
+  $('voiceBtn').setAttribute('aria-pressed', String(voiceOn));
+  $('voiceBtn').setAttribute('aria-label', voiceOn ? 'Turn voice coach off' : 'Turn voice coach on');
+  $('voiceBtn').style.opacity = voiceOn ? '1' : '0.5';
+  if (!voiceOn && 'speechSynthesis' in window) speechSynthesis.cancel();
+});
+$('againBtn').addEventListener('click', () => location.reload());
+renderPlan();
+</script>
+</body>
+</html>
